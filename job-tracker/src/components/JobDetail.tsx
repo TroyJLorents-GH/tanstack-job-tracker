@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { ArrowLeft, Edit, ExternalLink, Plus } from 'lucide-react';
@@ -24,9 +24,28 @@ const stageLabels = {
   withdrawn: 'Withdrawn',
 };
 
+type Stage = keyof typeof stageColors;
+
+interface Job {
+  position: string;
+  company: string;
+  stage: Stage;
+  appliedDate: string;
+  location?: string;
+  salary?: string;
+  jobUrl?: string;
+  notes?: string;
+  interviewPrep?: {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+  }[];
+}
+
 export function JobDetail() {
   const { jobId } = useParams({ from: '/jobs/$jobId' });
-  const { data: job, isLoading, error } = useJobApplication(jobId);
+  const { data: job, isLoading, error } = useJobApplication(jobId) as { data: Job | undefined, isLoading: boolean, error: unknown };
   const addInterviewPrep = useAddInterviewPrep();
   const [showAddPrep, setShowAddPrep] = useState(false);
   const [prepTitle, setPrepTitle] = useState('');
