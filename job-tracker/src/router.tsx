@@ -3,6 +3,9 @@ import { Root } from './components/Root';
 import { JobList } from './components/JobList';
 import { JobDetail } from './components/JobDetail';
 import { JobForm } from './components/JobForm';
+import { Documents } from './components/Documents';
+import { Login } from './components/Login';
+import { useAuth } from './context/AuthProvider';
 
 // Root route
 const rootRoute = createRootRoute({
@@ -38,11 +41,33 @@ const editJobRoute = createRoute({
 });
 
 // Route tree
+const LoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: Login,
+});
+
+const ProtectedDocuments = () => {
+  const { user, isEnabled, loading } = useAuth();
+  if (!isEnabled) return <Documents />; // allow during local dev without auth
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user) return <Login />;
+  return <Documents />;
+};
+
+const DocumentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/documents',
+  component: ProtectedDocuments,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   jobDetailRoute,
   newJobRoute,
   editJobRoute,
+  DocumentsRoute,
+  LoginRoute,
 ]);
 
 // Router instance

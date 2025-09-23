@@ -1,4 +1,4 @@
-import { JobApplication, JobApplicationFormData } from '../types/job';
+import type { JobApplication, JobApplicationFormData } from '../types/job';
 
 // Mock data storage
 const jobApplications: JobApplication[] = [

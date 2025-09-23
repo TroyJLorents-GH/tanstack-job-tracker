@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -6,13 +6,12 @@ import {
   getSortedRowModel,
   flexRender,
   createColumnHelper,
-  ColumnDef,
 } from '@tanstack/react-table';
 import { Link } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { Search, Filter, Edit, Trash2, Eye } from 'lucide-react';
 import { useJobApplications, useDeleteJobApplication } from '../hooks/useJobApplications';
-import { JobApplication, JobStage } from '../types/job';
+import type { JobApplication, JobStage } from '../types/job';
 
 const columnHelper = createColumnHelper<JobApplication>();
 
@@ -24,7 +23,7 @@ const stageColors = {
   offer: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
   withdrawn: 'bg-gray-100 text-gray-800',
-};
+} as const;
 
 const stageLabels = {
   applied: 'Applied',
@@ -34,7 +33,7 @@ const stageLabels = {
   offer: 'Offer',
   rejected: 'Rejected',
   withdrawn: 'Withdrawn',
-};
+} as const;
 
 export function JobList() {
   const { data: jobs = [], isLoading, error } = useJobApplications();
@@ -42,7 +41,7 @@ export function JobList() {
   const [globalFilter, setGlobalFilter] = useState('');
   const [stageFilter, setStageFilter] = useState<JobStage | 'all'>('all');
 
-  const columns = useMemo<ColumnDef<JobApplication>[]>(
+  const columns = useMemo(
     () => [
       columnHelper.accessor('company', {
         header: 'Company',
@@ -69,8 +68,8 @@ export function JobList() {
         cell: (info) => {
           const stage = info.getValue();
           return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stageColors[stage]}`}>
-              {stageLabels[stage]}
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stageColors[stage as keyof typeof stageColors]}`}>
+              {stageLabels[stage as keyof typeof stageLabels]}
             </span>
           );
         },
