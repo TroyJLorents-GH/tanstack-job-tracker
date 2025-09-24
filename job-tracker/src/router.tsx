@@ -5,6 +5,7 @@ import { JobDetail } from './components/JobDetail';
 import { JobForm } from './components/JobForm';
 import { Documents } from './components/Documents';
 import { Login } from './components/Login';
+import { Discover } from './components/Discover';
 import { useAuth } from './context/AuthProvider';
 
 // Root route
@@ -61,12 +62,19 @@ const DocumentsRoute = createRoute({
   component: ProtectedDocuments,
 });
 
+const DiscoverRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/discover',
+  component: Discover,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   jobDetailRoute,
   newJobRoute,
   editJobRoute,
   DocumentsRoute,
+  DiscoverRoute,
   LoginRoute,
 ]);
 

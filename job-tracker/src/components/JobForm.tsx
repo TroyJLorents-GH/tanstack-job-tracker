@@ -3,7 +3,6 @@ import { useMatch, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useJobApplication, useCreateJobApplication, useUpdateJobApplication } from '../hooks/useJobApplications';
 import type { JobApplicationFormData, JobStage, JobStatus } from '../types/job';
-import { parseJobFromUrl } from '../services/urlParser';
 
 const stageOptions = [
   { value: 'applied', label: 'Applied' },
@@ -43,9 +42,6 @@ export function JobForm() {
     notes: '',
   });
 
-  const [jobUrlInput, setJobUrlInput] = useState('');
-  const [isParsing, setIsParsing] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (existingJob && isEditing) {
@@ -104,51 +100,6 @@ export function JobForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="px-6 py-4 space-y-6">
-            {/* Add by URL */}
-            <div className="rounded-md border border-gray-200 p-4 bg-gray-50">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Add by URL (paste a job posting URL to prefill)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={jobUrlInput}
-                  onChange={(e) => setJobUrlInput(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  disabled={isParsing || !jobUrlInput}
-                  onClick={async () => {
-                    setIsParsing(true);
-                    setParseError(null);
-                    try {
-                      const parsed = await parseJobFromUrl(jobUrlInput);
-                      setFormData(prev => ({
-                        ...prev,
-                        company: parsed.company || prev.company,
-                        position: parsed.position || prev.position,
-                        location: parsed.location || prev.location,
-                        salary: parsed.salary || prev.salary,
-                        jobUrl: parsed.jobUrl || prev.jobUrl,
-                      }));
-                    } catch (e) {
-                      setParseError('Unable to parse this URL. You can still fill the fields manually.');
-                    } finally {
-                      setIsParsing(false);
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
-                >
-                  {isParsing ? 'Parsing…' : 'Prefill'}
-                </button>
-              </div>
-              {parseError && (
-                <div className="mt-2 text-sm text-red-600">{parseError}</div>
-              )}
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="company" className="block text-sm font-medium text-gray-700">

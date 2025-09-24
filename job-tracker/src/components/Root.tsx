@@ -1,5 +1,5 @@
 import { Outlet, Link } from '@tanstack/react-router';
-import { Briefcase, Plus, Home, FileText } from 'lucide-react';
+import { Briefcase, Plus, Home, FileText, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthProvider';
 
 export function Root() {
@@ -56,6 +56,16 @@ export function Root() {
                 >
                   <Home className="h-4 w-4 mr-1" />
                   Dashboard
+                </Link>
+                <Link
+                  to="/discover"
+                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  activeProps={{
+                    className: "flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50"
+                  }}
+                >
+                  <Search className="h-4 w-4 mr-1" />
+                  Discover
                 </Link>
                 <Link
                   to="/jobs/new"
