@@ -22,6 +22,9 @@ interface SearchResponse {
 export function Discover() {
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
+  const [resultsCount, setResultsCount] = useState(20);
+  const [hoursOld, setHoursOld] = useState(72);
+  const [selectedSites, setSelectedSites] = useState<string[]>(['linkedin', 'indeed', 'glassdoor', 'zip_recruiter']);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<JobResult[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +50,9 @@ export function Discover() {
         body: JSON.stringify({
           search_term: searchTerm,
           location: location,
-          results_wanted: 40,
-          site_name: ['linkedin', 'indeed', 'glassdoor', 'zip_recruiter']
+          results_wanted: resultsCount,
+          hours_old: hoursOld,
+          site_name: selectedSites
         }),
       });
       
@@ -102,6 +106,22 @@ export function Discover() {
     }
   };
 
+  const handleSiteToggle = (site: string) => {
+    setSelectedSites(prev => 
+      prev.includes(site) 
+        ? prev.filter(s => s !== site)
+        : [...prev, site]
+    );
+  };
+
+  const siteOptions = [
+    { value: 'linkedin', label: 'LinkedIn' },
+    { value: 'indeed', label: 'Indeed' },
+    { value: 'glassdoor', label: 'Glassdoor' },
+    { value: 'zip_recruiter', label: 'ZipRecruiter' },
+    { value: 'google', label: 'Google' }
+  ];
+
   return (
     <div className="px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
@@ -112,7 +132,7 @@ export function Discover() {
 
         {/* Search Form */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Job Title
@@ -163,6 +183,61 @@ export function Discover() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Number of Results
+              </label>
+              <select
+                value={resultsCount}
+                onChange={(e) => setResultsCount(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>All</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Posted Within
+              </label>
+              <select
+                value={hoursOld}
+                onChange={(e) => setHoursOld(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={24}>24 hours</option>
+                <option value={48}>48 hours</option>
+                <option value={72}>72 hours</option>
+                <option value={120}>5 days</option>
+                <option value={168}>7 days</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Job Sites
+              </label>
+              <div className="space-y-1">
+                {siteOptions.map((site) => (
+                  <label key={site.value} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedSites.includes(site.value)}
+                      onChange={() => handleSiteToggle(site.value)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{site.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </div>

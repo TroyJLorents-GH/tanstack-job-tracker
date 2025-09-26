@@ -30,6 +30,7 @@ class SearchRequest(BaseModel):
     search_term: str
     location: str = ""
     results_wanted: int = 40
+    hours_old: int = 72
     site_name: list = ["linkedin", "indeed", "glassdoor", "zip_recruiter"]
 
 @app.post("/parse-job")
@@ -93,7 +94,7 @@ def search_jobs(req: SearchRequest):
             search_term=req.search_term,
             location=req.location,
             results_wanted=req.results_wanted,  # Use requested number
-            hours_old=72,  # Last 3 days
+            hours_old=req.hours_old,  # Use requested time range
             linkedin_fetch_description=True,  # Enable for better data
             verbose=1,  # Reduce logging noise
         )
