@@ -1,0 +1,51 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: us-west1
+
+steps:
+  # Build & push backend (Dockerfile lives in job-tracker/)
+  - name: gcr.io/cloud-builders/docker
+    args: ['build','-t','gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA','-f','job-tracker/Dockerfile','.']
+  - name: gcr.io/cloud-builders/docker
+    args: ['push','gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA']
+
+  # Deploy backend
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args: ['run','deploy','job-tracker-backend','--image','gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA','--region','${_REGION}','--platform','managed','--allow-unauthenticated','--port','8080','--memory','1Gi','--cpu','1','--max-instances','10']
+
+  # Capture backend URL (used to inject into Vite build)
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud run services describe job-tracker-backend --region ${_REGION} --platform managed --format='value(status.url)' > /workspace/BACKEND_URL.txt
+        echo "Backend URL: $(cat /workspace/BACKEND_URL.txt)"
+
+  # Build & push frontend (inject VITE_PARSE_API_URL at build-time)
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        BACKEND_URL=$(cat /workspace/BACKEND_URL.txt)
+        docker build -t gcr.io/$PROJECT_ID/job-tracker-frontend:$COMMIT_SHA \
+          --build-arg VITE_PARSE_API_URL=$BACKEND_URL \
+          -f job-tracker/Dockerfile.frontend .
+
+  - name: gcr.io/cloud-builders/docker
+    args: ['push','gcr.io/$PROJECT_ID/job-tracker-frontend:$COMMIT_SHA']
+
+  # Deploy frontend (SPA on Cloud Run, Nginx fallback to /index.html)
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args: ['run','deploy','job-tracker-frontend','--image','gcr.io/$PROJECT_ID/job-tracker-frontend:$COMMIT_SHA','--region','${_REGION}','--platform','managed','--allow-unauthenticated','--port','8080','--memory','512Mi','--max-instances','10']
+
+images:
+  - gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA
+  - gcr.io/$PROJECT_ID/job-tracker-frontend:$COMMIT_SHA
+
+
