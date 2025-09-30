@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import type { JobApplicationFormData } from '../types/job';
 
+
 // Query keys
 export const jobKeys = {
   all: ['jobs'] as const,
