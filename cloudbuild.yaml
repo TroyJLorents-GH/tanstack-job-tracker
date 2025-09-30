@@ -7,7 +7,7 @@ substitutions:
 steps:
   # Build & push backend (Dockerfile lives in job-tracker/)
   - name: gcr.io/cloud-builders/docker
-    args: ['build','-t','gcr.io/$PROJECT_ID/job-tracker-backend:$BUILD_ID','-f','job-tracker/Dockerfile','.']
+    args: ['build','-t','gcr.io/$PROJECT_ID/job-tracker-backend:$BUILD_ID','-f','job-tracker/Dockerfile','job-tracker']
   - name: gcr.io/cloud-builders/docker
     args: ['push','gcr.io/$PROJECT_ID/job-tracker-backend:$BUILD_ID']
 
