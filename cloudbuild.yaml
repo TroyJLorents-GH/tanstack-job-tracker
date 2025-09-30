@@ -37,7 +37,7 @@ steps:
         echo "Backend URL: $(cat /workspace/BACKEND_URL.txt)"
 
   # --- NEW: Build frontend with Node (clear Vite/TS logs here) ---
-  - name: node:18
+  - name: node:20
     dir: job-tracker
     entrypoint: bash
     args:
