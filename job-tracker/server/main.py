@@ -13,10 +13,13 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # let any frontend call (ok for early testing) tighten to exact frontend URL later
+    allow_origins=[
+        "https://job-tracker-frontend-ekxsmomdlq-uw.a.run.app",  # your Cloud Run frontend
+        "http://localhost:5173",  # keep this for local dev
+    ],
     allow_methods=["*"],
     allow_headers=["*"],   # lets Supabase send Authorization headers
-    allow_credentials=False,  # must be False if allow_origins="*"
+    allow_credentials=True,  # now safe since origins are explicit OR must be False if allow_origins="*"
 )
 
 @app.get("/")
