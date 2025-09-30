@@ -29,7 +29,7 @@ export type JobStatus =
   | 'archived';
 
 export interface InterviewPrep {
-  id: string;
+  id?: string;
   title: string;
   content: string;
   createdAt: string;
@@ -38,11 +38,12 @@ export interface InterviewPrep {
 export interface JobApplicationFormData {
   company: string;
   position: string;
-  appliedDate: string;
-  stage: JobStage;
-  status: JobStatus;
+  appliedDate?: string;
+  stage?: JobStage;
+  status?: JobStatus;
   salary?: string;
   location?: string;
   jobUrl?: string;
   notes?: string;
+  interviewPrep?: InterviewPrep[];
 }
