@@ -1,28 +1,13 @@
-# Build stage
-FROM node:18-alpine AS build
-WORKDIR /app
+# job-tracker/Dockerfile.frontend
 
-COPY package*.json ./
-RUN npm ci
-
-COPY . ./
-
-# Inject Vite env at build time
-ARG VITE_PARSE_API_URL
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-
-ENV VITE_PARSE_API_URL=$VITE_PARSE_API_URL
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-RUN npm run build
-
-# Serve via nginx with SPA fallback
 FROM nginx:alpine
+
 # Nginx listens on 8080 for Cloud Run
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY job-tracker/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy the *already built* Vite assets
+# (cloudbuild uses repo-root context ".", so this path exists)
+COPY job-tracker/dist /usr/share/nginx/html
+
 EXPOSE 8080
 CMD ["nginx","-g","daemon off;"]
-
-
