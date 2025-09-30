@@ -45,6 +45,8 @@ steps:
         BACKEND_URL=$(cat /workspace/BACKEND_URL.txt)
         docker build -t gcr.io/$PROJECT_ID/job-tracker-frontend:$BUILD_ID \
           --build-arg VITE_PARSE_API_URL=$$BACKEND_URL \
+          --build-arg VITE_SUPABASE_URL=https://dwnhvygjvfpoccbiktxu.supabase.co \
+          --build-arg VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3bmh2eWdqdmZwb2NjYmlrdHh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1MjY1OTYsImV4cCI6MjA3NDEwMjU5Nn0.LkHSj_HTPs6Jr_Zo5r8p1e-x-QZn1dFBsWRl7jfp88k \
           -f job-tracker/Dockerfile.frontend .
 
   - name: gcr.io/cloud-builders/docker

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { Upload, FileText, Trash2, Sparkles } from 'lucide-react';
 import { AIGenerator } from './AIGenerator';
+import { useAuth } from '../context/AuthProvider';
 
 type StoredFile = {
   name: string;
@@ -13,28 +14,42 @@ export function Documents() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'files' | 'resume' | 'cover-letter'>('files');
+  const { user, isEnabled } = useAuth();
 
   const bucket = 'documents';
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
+  if (!isSupabaseConfigured || !supabase) return;
     (async () => {
-      const client = supabase as NonNullable<typeof supabase>;
-      const { data } = await client.storage.from(bucket).list(undefined, { limit: 100, offset: 0 });
-      if (!data) return;
-      const withUrls: StoredFile[] = await Promise.all(
-        data.map(async (f) => {
-          const { data: url } = client.storage.from(bucket).getPublicUrl(f.name);
-          return { name: f.name, url: url.publicUrl };
-        })
-      );
+      const client = supabase!;
+      const { data, error } = await client
+        .storage
+        .from(bucket)
+        .list('', { limit: 100, offset: 0 }); // use '' rather than undefined
+
+      if (error || !data) return;
+
+      const withUrls = data.map(f => {
+        const { data: url } = client.storage.from(bucket).getPublicUrl(f.name);
+        return { name: f.name, url: url.publicUrl };
+      });
       setFiles(withUrls);
     })();
-  }, []);
+  }, [isSupabaseConfigured, supabase]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!isEnabled || !supabase) {
+      setError('Storage not configured.');
+      return;
+    }
+    if (!user) { // NEW: require login to write
+      setError('Please sign in to upload files.');
+      return;
+    }
+
     if (!isSupabaseConfigured || !supabase) {
       setError('Storage not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
       return;
@@ -57,7 +72,13 @@ export function Documents() {
   };
 
   const onDelete = async (name: string) => {
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase) { 
+      setError('Storage not configured.'); 
+      return; };
+    if (!user) {
+      setError('Please sign in to delete files.');
+      return;
+    }
     const client = supabase as NonNullable<typeof supabase>;
     const { error: delErr } = await client.storage.from(bucket).remove([name]);
     if (delErr) {
