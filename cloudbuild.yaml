@@ -14,7 +14,7 @@ steps:
   # Deploy backend
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
-    args: ['run','deploy','job-tracker-backend','--image','gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA','--region','${_REGION}','--platform','managed','--allow-unauthenticated','--port','8080','--memory','1Gi','--cpu','1','--max-instances','10']
+    args: ['run','deploy','job-tracker-backend','--image','gcr.io/$PROJECT_ID/job-tracker-backend:$COMMIT_SHA','--region','${_REGION}','--platform','managed','--allow-unauthenticated','--port','8080','--memory','1Gi','--cpu','1','--max-instances','10', '--timeout','180s']
 
   # Capture backend URL (used to inject into Vite build)
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk

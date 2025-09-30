@@ -13,10 +13,10 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # relax during initial rollout; tighten to exact frontend URL later
-    allow_credentials=True,
+    allow_origins=["*"],  # let any frontend call (ok for early testing) tighten to exact frontend URL later
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"],   # lets Supabase send Authorization headers
+    allow_credentials=False,  # must be False if allow_origins="*"
 )
 
 @app.get("/")
