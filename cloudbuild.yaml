@@ -33,7 +33,7 @@ steps:
       - |
         BACKEND_URL=$(cat /workspace/BACKEND_URL.txt)
         docker build -t gcr.io/$PROJECT_ID/job-tracker-frontend:$COMMIT_SHA \
-          --build-arg VITE_PARSE_API_URL=$BACKEND_URL \
+          --build-arg VITE_PARSE_API_URL=$$BACKEND_URL \
           -f job-tracker/Dockerfile.frontend .
 
   - name: gcr.io/cloud-builders/docker
