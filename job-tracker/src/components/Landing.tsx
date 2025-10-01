@@ -9,10 +9,10 @@ export function Landing() {
     <main className="min-h-[60vh] flex items-center justify-center bg-gray-50">
       <div className="max-w-3xl p-6 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Track your job search — simply.
+          Organize your job search. All in one place.
         </h1>
         <p className="mt-3 text-gray-600">
-          Add applications, monitor stages, and keep interview prep notes — all in one place.
+          Track applications, generate AI-powered resumes and cover letters, and prep smarter for interviews.
         </p>
 
         <div className="mt-6 flex gap-3 justify-center">
@@ -27,7 +27,7 @@ export function Landing() {
             to="/discover"
             className="inline-flex items-center rounded-lg px-4 py-2 underline"
           >
-            Learn more
+            Discover opportunities
           </Link>
         </div>
 
