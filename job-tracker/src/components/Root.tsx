@@ -1,10 +1,10 @@
-import { Outlet, Link } from '@tanstack/react-router';
-import { Briefcase, Plus, Home, FileText, Search } from 'lucide-react';
-import { useAuth } from '../context/AuthProvider';
-import { Footer } from './Footer';
+import { Outlet, Link } from '@tanstack/react-router'
+import { Briefcase, Plus, Home, FileText, Search } from 'lucide-react'
+import { useAuth } from '../context/AuthProvider'
+import { Footer } from './Footer'
 
 export function Root() {
-  const { user, signOut, isEnabled } = useAuth();
+  const { user, signOut, isEnabled } = useAuth()
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -18,6 +18,7 @@ export function Root() {
                 Job Application Tracker
               </h1>
             </div>
+
             <div className="flex items-center space-x-4">
               {/* Auth status banner */}
               {isEnabled && (
@@ -52,34 +53,55 @@ export function Root() {
                   to="/"
                   className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                   activeProps={{
-                    className: "flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50"
+                    className:
+                      'flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50',
                   }}
                 >
                   <Home className="h-4 w-4 mr-1" />
-                  Dashboard
+                  Home
                 </Link>
+
+                <Link
+                  to="/jobs"
+                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  activeProps={{
+                    className:
+                      'flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50',
+                  }}
+                >
+                  <Briefcase className="h-4 w-4 mr-1" />
+                  My Jobs
+                </Link>
+
                 <Link
                   to="/discover"
                   className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                   activeProps={{
-                    className: "flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50"
+                    className:
+                      'flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50',
                   }}
                 >
                   <Search className="h-4 w-4 mr-1" />
                   Discover
                 </Link>
-                <Link
-                  to="/jobs/new"
-                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Job
-                </Link>
+
+                {/* Optional: hide Add Job for logged-out users when auth is enabled */}
+                {(!isEnabled || user) && (
+                  <Link
+                    to="/jobs/new"
+                    className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Job
+                  </Link>
+                )}
+
                 <Link
                   to="/documents"
                   className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                   activeProps={{
-                    className: "flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50"
+                    className:
+                      'flex items-center px-3 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-50',
                   }}
                 >
                   <FileText className="h-4 w-4 mr-1" />
@@ -99,5 +121,5 @@ export function Root() {
       {/* Footer */}
       <Footer />
     </div>
-  );
+  )
 }

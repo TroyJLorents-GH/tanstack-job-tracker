@@ -8,9 +8,10 @@ import {
   createColumnHelper,
 } from '@tanstack/react-table';
 import { Link } from '@tanstack/react-router';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { Search, Filter, Edit, Trash2, Eye } from 'lucide-react';
 import { useJobApplications, useDeleteJobApplication } from '../hooks/useJobApplications';
+import { useAuth } from '../context/AuthProvider';
 import type { JobApplication, JobStage } from '../types/job';
 
 const columnHelper = createColumnHelper<JobApplication>();
@@ -38,6 +39,8 @@ const stageLabels = {
 export function JobList() {
   const { data: jobs = [], isLoading, error } = useJobApplications();
   const deleteJob = useDeleteJobApplication();
+  const { user, isEnabled } = useAuth();
+
   const [globalFilter, setGlobalFilter] = useState('');
   const [stageFilter, setStageFilter] = useState<JobStage | 'all'>('all');
 
@@ -51,24 +54,29 @@ export function JobList() {
       }),
       columnHelper.accessor('position', {
         header: 'Position',
-        cell: (info) => (
-          <div className="text-gray-700">{info.getValue()}</div>
-        ),
+        cell: (info) => <div className="text-gray-700">{info.getValue()}</div>,
       }),
       columnHelper.accessor('appliedDate', {
         header: 'Applied Date',
-        cell: (info) => (
-          <div className="text-gray-600">
-            {format(new Date(info.getValue()), 'MMM dd, yyyy')}
-          </div>
-        ),
+        cell: (info) => {
+          const d = new Date(info.getValue());
+          return (
+            <div className="text-gray-600">
+              {isValid(d) ? format(d, 'MMM dd, yyyy') : '-'}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor('stage', {
         header: 'Stage',
         cell: (info) => {
           const stage = info.getValue();
           return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stageColors[stage as keyof typeof stageColors]}`}>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                stageColors[stage as keyof typeof stageColors]
+              }`}
+            >
               {stageLabels[stage as keyof typeof stageLabels]}
             </span>
           );
@@ -107,7 +115,11 @@ export function JobList() {
             </Link>
             <button
               onClick={() => {
-                if (confirm('Are you sure you want to delete this job application?')) {
+                if (
+                  confirm(
+                    'Are you sure you want to delete this job application?',
+                  )
+                ) {
                   deleteJob.mutate(info.row.original.id);
                 }
               }}
@@ -119,24 +131,26 @@ export function JobList() {
         ),
       }),
     ],
-    [deleteJob]
+    [deleteJob],
   );
 
   const filteredData = useMemo(() => {
     let filtered = jobs;
-    
+
     if (stageFilter !== 'all') {
-      filtered = filtered.filter(job => job.stage === stageFilter);
+      filtered = filtered.filter((job) => job.stage === stageFilter);
     }
-    
+
     if (globalFilter) {
-      filtered = filtered.filter(job =>
-        job.company.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        job.position.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        job.location?.toLowerCase().includes(globalFilter.toLowerCase())
+      const q = globalFilter.toLowerCase();
+      filtered = filtered.filter(
+        (job) =>
+          job.company.toLowerCase().includes(q) ||
+          job.position.toLowerCase().includes(q) ||
+          job.location?.toLowerCase().includes(q),
       );
     }
-    
+
     return filtered;
   }, [jobs, globalFilter, stageFilter]);
 
@@ -154,25 +168,47 @@ export function JobList() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="max-w-md mx-auto text-center py-16">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+        <h2 className="mt-6 text-lg font-semibold text-gray-900">
+          Loading your dashboard…
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Fetching your job applications
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600">Error loading job applications</div>
+      <div className="max-w-md mx-auto text-center py-16">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Couldn’t load your jobs
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          This could be a temporary issue. Please try again.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
+
+  const hasAnyJobs = jobs.length > 0;
+  const hasFilteredRows = filteredData.length > 0;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Job Applications</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Job Applications
+          </h1>
           <p className="mt-2 text-sm text-gray-700">
             Track your job applications, interviews, and progress
           </p>
@@ -207,7 +243,9 @@ export function JobList() {
           </div>
           <select
             value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value as JobStage | 'all')}
+            onChange={(e) =>
+              setStageFilter(e.target.value as JobStage | 'all')
+            }
             className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Stages</option>
@@ -221,53 +259,106 @@ export function JobList() {
       </div>
 
       {/* Table */}
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-gray-50">
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {hasFilteredRows && (
+        <div className="mt-8 flex flex-col">
+          <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {table.getRowModel().rows.map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50">
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {filteredData.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-500">No job applications found</div>
+      {/* Empty state (filter-aware + auth-aware) */}
+      {!hasFilteredRows && (
+        <div className="text-center py-16 border border-dashed rounded-lg">
+          {hasAnyJobs ? (
+            <>
+              <h3 className="text-lg font-semibold text-gray-900">No matches</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Try clearing your search or stage filter.
+              </p>
+              <button
+                onClick={() => {
+                  setGlobalFilter('');
+                  setStageFilter('all');
+                }}
+                className="mt-4 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Clear filters
+              </button>
+            </>
+          ) : isEnabled && !user ? (
+            <>
+              <h3 className="text-lg font-semibold text-gray-900">Welcome!</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Please sign in to create your personal dashboard.
+              </p>
+              <Link
+                to="/login"
+                className="mt-4 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Sign in
+              </Link>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-gray-900">No jobs yet</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Start by adding your first application or explore job ideas.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <Link
+                  to="/jobs/new"
+                  className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Add Job
+                </Link>
+                <Link
+                  to="/discover"
+                  className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Discover
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
