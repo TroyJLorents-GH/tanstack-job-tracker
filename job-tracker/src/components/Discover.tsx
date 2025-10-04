@@ -23,50 +23,98 @@ export function Discover() {
   const [searchTerm, setSearchTerm] = useState('');
   const [location, setLocation] = useState('');
   const [resultsCount, setResultsCount] = useState(20);
-  const [hoursOld, setHoursOld] = useState(72);
-  const [selectedSites, setSelectedSites] = useState<string[]>(['linkedin', 'indeed', 'glassdoor', 'zip_recruiter']);
+
+  // New: days filter instead of hours
+  const [daysOld, setDaysOld] = useState(7);
+
+  // New: country (for Indeed/Glassdoor) + remote toggle
+  const [country, setCountry] = useState('USA');
+  const [remoteOnly, setRemoteOnly] = useState(false);
+
+  const [selectedSites, setSelectedSites] = useState<string[]>([
+    'linkedin',
+    'indeed',
+    'glassdoor',
+    'zip_recruiter',
+  ]);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<JobResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [addingJob, setAddingJob] = useState<string | null>(null);
-  
+
   const createJob = useCreateJobApplication();
 
+  const siteOptions = [
+    { value: 'linkedin', label: 'LinkedIn' },
+    { value: 'indeed', label: 'Indeed' },
+    { value: 'glassdoor', label: 'Glassdoor' },
+    { value: 'zip_recruiter', label: 'ZipRecruiter' },
+    { value: 'google', label: 'Google' },
+  ];
+
+  const usingLinkedinOrZR = selectedSites.some((s) => s === 'linkedin' || s === 'zip_recruiter');
+  const usingIG = selectedSites.some((s) => s === 'indeed' || s === 'glassdoor');
+
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
-    
+    if (!searchTerm.trim()) {
+      setError('Please enter a job title.');
+      return;
+    }
+
+    // If LinkedIn or ZipRecruiter are selected, strongly encourage a location unless remote
+    if (usingLinkedinOrZR && !location.trim() && !remoteOnly) {
+      setError('Please add a location (or check “Remote only”) for LinkedIn / ZipRecruiter searches.');
+      return;
+    }
+
     setIsSearching(true);
     setError(null);
-    
+
     try {
       const apiBase = (import.meta as any).env?.VITE_PARSE_API_URL as string | undefined;
       if (!apiBase) {
         throw new Error('Search API not configured. Add VITE_PARSE_API_URL to .env');
       }
-      
+
+      // Convert days → hours for backend; respect Indeed limitation with remote
+      let hours_old = daysOld > 0 ? daysOld * 24 : undefined;
+      if (usingIG && remoteOnly) {
+        // Indeed limitation: can't combine is_remote with hours_old
+        hours_old = undefined;
+      }
+
+      const payload: any = {
+        search_term: searchTerm,
+        results_wanted: resultsCount,
+        site_name: selectedSites,
+        ...(remoteOnly ? { is_remote: true } : {}),
+        ...(hours_old ? { hours_old } : {}),
+        ...(location.trim() ? { location: location.trim() } : {}),
+        ...(usingIG ? { country_indeed: country } : {}),
+      };
+
+      // Google uses google_search_term (location/time baked into the string)
+      if (selectedSites.includes('google')) {
+        const since =
+          daysOld === 0 ? '' : daysOld === 1 ? ' since yesterday' : ` since ${daysOld} days ago`;
+        const locPart = location.trim() ? ` near ${location.trim()}` : remoteOnly ? ' remote' : '';
+        payload.google_search_term = `${searchTerm} jobs${locPart}${since}`.trim();
+      }
+
       const response = await fetch(`${apiBase.replace(/\/$/, '')}/search-jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          search_term: searchTerm,
-          location: location,
-          results_wanted: resultsCount,
-          hours_old: hoursOld,
-          site_name: selectedSites
-        }),
+        body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);
       }
-      
+
       const data: SearchResponse = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setResults(data.jobs);
+      if (data.error) throw new Error(data.error);
+
+      setResults(Array.isArray(data.jobs) ? data.jobs : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
       setResults([]);
@@ -77,7 +125,7 @@ export function Discover() {
 
   const handleAddJob = async (job: JobResult) => {
     setAddingJob(job.job_url);
-    
+
     try {
       await createJob.mutateAsync({
         company: job.company,
@@ -107,20 +155,8 @@ export function Discover() {
   };
 
   const handleSiteToggle = (site: string) => {
-    setSelectedSites(prev => 
-      prev.includes(site) 
-        ? prev.filter(s => s !== site)
-        : [...prev, site]
-    );
+    setSelectedSites((prev) => (prev.includes(site) ? prev.filter((s) => s !== site) : [...prev, site]));
   };
-
-  const siteOptions = [
-    { value: 'linkedin', label: 'LinkedIn' },
-    { value: 'indeed', label: 'Indeed' },
-    { value: 'glassdoor', label: 'Glassdoor' },
-    { value: 'zip_recruiter', label: 'ZipRecruiter' },
-    { value: 'google', label: 'Google' }
-  ];
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">
@@ -134,9 +170,7 @@ export function Discover() {
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Job Title
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -144,27 +178,28 @@ export function Discover() {
                   placeholder="e.g., Software Engineer"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSearch();
+                  }}
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Location
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="e.g., San Francisco, CA"
+                  placeholder="e.g., San Francisco, CA (leave blank for remote)"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-            
+
             <div className="flex items-end">
               <button
                 onClick={handleSearch}
@@ -173,7 +208,7 @@ export function Discover() {
               >
                 {isSearching ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                     Searching...
                   </>
                 ) : (
@@ -189,9 +224,7 @@ export function Discover() {
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Number of Results
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of Results</label>
               <select
                 value={resultsCount}
                 onChange={(e) => setResultsCount(Number(e.target.value))}
@@ -205,26 +238,23 @@ export function Discover() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Posted Within
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Posted Within</label>
               <select
-                value={hoursOld}
-                onChange={(e) => setHoursOld(Number(e.target.value))}
+                value={daysOld}
+                onChange={(e) => setDaysOld(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value={24}>24 hours</option>
-                <option value={48}>48 hours</option>
-                <option value={72}>72 hours</option>
-                <option value={120}>5 days</option>
-                <option value={168}>7 days</option>
+                <option value={0}>Any time</option>
+                <option value={1}>Past 24 hours</option>
+                <option value={3}>Past 3 days</option>
+                <option value={7}>Past 7 days</option>
+                <option value={14}>Past 14 days</option>
+                <option value={30}>Past 30 days</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Job Sites
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Job Sites</label>
               <div className="space-y-1">
                 {siteOptions.map((site) => (
                   <label key={site.value} className="flex items-center">
@@ -240,6 +270,46 @@ export function Discover() {
               </div>
             </div>
           </div>
+
+          {/* Extra filters line 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Remote</label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={remoteOnly}
+                  onChange={(e) => setRemoteOnly(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Remote only</span>
+              </label>
+              {usingIG && (
+                <p className="text-xs text-gray-500 mt-1">
+                  On Indeed/Glassdoor, Remote can’t be combined with “Posted Within”. We’ll prioritize Remote.
+                </p>
+              )}
+            </div>
+
+            {usingIG && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Country (Indeed/Glassdoor)
+                </label>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="USA">USA</option>
+                  <option value="Canada">Canada</option>
+                  <option value="UK">UK</option>
+                  <option value="Australia">Australia</option>
+                  {/* Add more from README as needed */}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Error Message */}
@@ -252,9 +322,7 @@ export function Discover() {
         {/* Results */}
         {results.length > 0 && (
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Found {results.length} jobs
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900">Found {results.length} jobs</h2>
           </div>
         )}
 
@@ -263,10 +331,8 @@ export function Discover() {
             <div key={`${job.job_url}-${index}`} className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {job.title}
-                  </h3>
-                  
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h3>
+
                   <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                     <div className="flex items-center gap-1">
                       <Building className="h-4 w-4" />
@@ -289,20 +355,16 @@ export function Discover() {
                       </div>
                     )}
                   </div>
-                  
+
                   {job.description && (
-                    <p className="text-gray-700 text-sm mb-3 line-clamp-3">
-                      {job.description}
-                    </p>
+                    <p className="text-gray-700 text-sm mb-3 line-clamp-3">{job.description}</p>
                   )}
-                  
+
                   <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="bg-gray-100 px-2 py-1 rounded">
-                      {job.site}
-                    </span>
+                    <span className="bg-gray-100 px-2 py-1 rounded">{job.site}</span>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-2 ml-4">
                   <a
                     href={job.job_url}
@@ -313,7 +375,7 @@ export function Discover() {
                     <ExternalLink className="h-4 w-4" />
                     View Job
                   </a>
-                  
+
                   <button
                     onClick={() => handleAddJob(job)}
                     disabled={addingJob === job.job_url}
@@ -321,7 +383,7 @@ export function Discover() {
                   >
                     {addingJob === job.job_url ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                         Adding...
                       </>
                     ) : (
