@@ -1,4 +1,18 @@
+# --- Environment files ---
+.env
+.env.*
+!.env.example     # keep a template for others
+!job-tracker/.env.example
+job-tracker/.env
+job-tracker/.env.local
+
+# --- Node / Build Artifacts ---
 node_modules/
 dist/
 build/
-.env
+*.log
+
+# --- Editor / OS files ---
+.DS_Store
+.idea/
+.vscode/
