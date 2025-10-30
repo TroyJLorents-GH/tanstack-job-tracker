@@ -7,6 +7,9 @@ import sqlite3
 import uuid
 from typing import Optional, List
 from datetime import datetime
+from fastapi import UploadFile, File
+from pypdf import PdfReader
+from docx import Document as DocxDocument
 
 app = FastAPI()
 
@@ -144,6 +147,42 @@ def list_applications() -> List[Application]:
         return [row_to_application(r) for r in rows]
     finally:
         conn.close()
+
+
+# -----------------------------
+# Document text extraction
+# -----------------------------
+
+class ExtractResponse(BaseModel):
+    text: str
+
+
+@app.post("/extract-text", response_model=ExtractResponse)
+async def extract_text(file: UploadFile = File(...)) -> ExtractResponse:
+    content = await file.read()
+    text = ""
+    try:
+        if file.filename.lower().endswith(".pdf"):
+            import io
+            reader = PdfReader(io.BytesIO(content))
+            parts = []
+            for page in reader.pages:
+                parts.append(page.extract_text() or "")
+            text = "\n".join(parts)
+        elif file.filename.lower().endswith(".docx"):
+            import io
+            doc = DocxDocument(io.BytesIO(content))
+            text = "\n".join([p.text for p in doc.paragraphs])
+        elif file.filename.lower().endswith((".txt", ".md")):
+            text = content.decode("utf-8", errors="ignore")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Use .pdf, .docx, .txt")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to extract text: {str(e)}")
+
+    # Trim to a reasonable size for context (e.g., 20k chars)
+    text = text.strip()[:20000]
+    return ExtractResponse(text=text)
 
 
 @app.get("/applications/{app_id}")
@@ -360,6 +399,7 @@ def search_jobs(req: SearchRequest):
             min_amount = clean_value(row.get("min_amount"))
             max_amount = clean_value(row.get("max_amount"))
             
+            full_desc = clean_value(row.get("description"))
             job = {
                 "title": clean_value(row.get("title")) or "Unknown Title",
                 "company": clean_value(row.get("company")) or "Unknown Company",
@@ -372,7 +412,9 @@ def search_jobs(req: SearchRequest):
                 "job_url": clean_value(row.get("job_url")) or "",
                 "site": clean_value(row.get("site")) or "indeed",
                 "date_posted": clean_value(row.get("date_posted")),
-                "description": clean_value(row.get("description"))[:200] + "..." if clean_value(row.get("description")) else None,
+                # Keep a compact description for the card, but include the full text separately
+                "description": (full_desc[:200] + "...") if full_desc and len(full_desc) > 200 else full_desc,
+                "full_description": full_desc,
             }
             jobs.append(job)
         

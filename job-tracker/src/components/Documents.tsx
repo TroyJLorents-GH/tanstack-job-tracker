@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Upload, FileText, Trash2, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthProvider'
 import { supabase, isSupabaseConfigured } from '../services/supabase'
 import { useDocuments } from '../hooks/useDocuments'
 import { AIGenerator } from './AIGenerator'
+import { useSearch } from '@tanstack/react-router'
 
 export function Documents() {
   const { user } = useAuth()
@@ -11,7 +12,25 @@ export function Documents() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'files' | 'resume' | 'cover-letter'>('files')
+  const [extractingId, setExtractingId] = useState<string | null>(null)
+  const [aiUserExperience, setAiUserExperience] = useState<string>('')
   const bucket = 'documents'
+
+  // Read deep-link params to prefill AI
+  const search = useSearch({ from: '/documents' }) as {
+    ai?: 'resume' | 'cover_letter'
+    companyName?: string
+    position?: string
+    jobDescription?: string
+  }
+  const initialTab = useMemo(() => {
+    if (search?.ai === 'resume') return 'resume'
+    if (search?.ai === 'cover_letter') return 'cover-letter'
+    return 'files'
+  }, [search])
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
 
   // UPLOAD
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,8 +154,77 @@ export function Documents() {
           </ul>
         )}
 
-        {activeTab === 'resume' && <AIGenerator type="resume" />}
-        {activeTab === 'cover-letter' && <AIGenerator type="cover_letter" />}
+        {activeTab === 'resume' && (
+          <AIGenerator
+            type="resume"
+            companyName={search?.companyName || ''}
+            position={search?.position || ''}
+            jobDescription={search?.jobDescription || ''}
+            initialUserExperience={aiUserExperience}
+          />
+        )}
+        {activeTab === 'cover-letter' && (
+          <AIGenerator
+            type="cover_letter"
+            companyName={search?.companyName || ''}
+            position={search?.position || ''}
+            jobDescription={search?.jobDescription || ''}
+            initialUserExperience={aiUserExperience}
+          />
+        )}
+
+        {(activeTab === 'resume' || activeTab === 'cover-letter') && (
+          <div className="mt-6 bg-white rounded-md shadow p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-800">Use an uploaded document as context</h3>
+              {extractingId && <span className="text-xs text-gray-500">Extracting…</span>}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {files
+                .filter((f) => /\.(pdf|docx|txt|md)$/i.test(f.file_name))
+                .map((f) => (
+                  <button
+                    key={f.id}
+                    disabled={!!extractingId}
+                    onClick={async () => {
+                      try {
+                        setError(null)
+                        setExtractingId(f.id)
+                        const resp = await fetch(f.url)
+                        const blob = await resp.blob()
+                        const form = new FormData()
+                        // File constructor is supported in modern browsers
+                        form.append('file', new File([blob], f.file_name))
+                        const base = (import.meta as any).env?.VITE_PARSE_API_URL as string
+                        const apiBase = base?.replace(/\/$/, '')
+                        const extResp = await fetch(`${apiBase}/extract-text`, { method: 'POST', body: form })
+                        if (!extResp.ok) {
+                          const msg = await extResp.text()
+                          throw new Error(msg || 'Failed to extract text')
+                        }
+                        const data = await extResp.json()
+                        setAiUserExperience(data.text || '')
+                      } catch (e: any) {
+                        setError(e?.message || 'Failed to use this document')
+                      } finally {
+                        setExtractingId(null)
+                      }
+                    }}
+                    className={`text-left border rounded p-3 hover:bg-gray-50 disabled:opacity-50`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-600" />
+                      <span className="truncate">{f.file_name}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">Click to use as AI context</div>
+                  </button>
+                ))}
+              {files.filter((f) => /\.(pdf|docx|txt|md)$/i.test(f.file_name)).length === 0 && (
+                <div className="text-sm text-gray-500">No supported files yet. Upload a .pdf, .docx, or .txt file in the Files tab.</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

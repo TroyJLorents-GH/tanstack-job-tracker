@@ -72,6 +72,12 @@ const DocumentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/documents',
   component: withAuth(Documents),
+  validateSearch: (search: any) => ({
+    ai: search?.ai as 'resume' | 'cover_letter' | undefined,
+    companyName: search?.companyName as string | undefined,
+    position: search?.position as string | undefined,
+    jobDescription: search?.jobDescription as string | undefined,
+  }),
 })
 
 // --- Route tree ---

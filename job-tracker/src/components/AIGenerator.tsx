@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { aiService } from '../services/ai';
 import type { GenerationRequest } from '../services/ai';
 import { FileText, Sparkles, Download, Copy } from 'lucide-react';
 
 interface AIGeneratorProps {
-  type: 'resume' | 'cover_letter';
-  jobDescription?: string;
-  companyName?: string;
-  position?: string;
+  type: 'resume' | 'cover_letter'
+  jobDescription?: string
+  companyName?: string
+  position?: string
+  initialUserExperience?: string
 }
 
-export function AIGenerator({ type, jobDescription = '', companyName = '', position = '' }: AIGeneratorProps) {
+export function AIGenerator({ type, jobDescription = '', companyName = '', position = '', initialUserExperience = '' }: AIGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -19,8 +20,13 @@ export function AIGenerator({ type, jobDescription = '', companyName = '', posit
     companyName,
     position,
     existingContent: '',
-    userExperience: '',
+    userExperience: initialUserExperience,
   });
+
+  // Sync external context into the form when it changes (e.g., after selecting a resume)
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, userExperience: initialUserExperience || prev.userExperience }));
+  }, [initialUserExperience]);
 
   const handleGenerate = async () => {
     if (!formData.jobDescription.trim() || !formData.companyName.trim() || !formData.position.trim()) {

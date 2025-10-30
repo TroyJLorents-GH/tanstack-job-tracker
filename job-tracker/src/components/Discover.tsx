@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, MapPin, Building, DollarSign, ExternalLink, Plus, Clock } from 'lucide-react';
+import { Search, MapPin, Building, DollarSign, ExternalLink, Plus, Clock, Sparkles } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useCreateJobApplication } from '../hooks/useJobApplications';
 
 interface JobResult {
@@ -11,6 +12,7 @@ interface JobResult {
   site: string;
   date_posted?: string;
   description?: string;
+  full_description?: string;
 }
 
 interface SearchResponse {
@@ -136,7 +138,7 @@ export function Discover() {
         location: job.location,
         salary: job.salary,
         jobUrl: job.job_url,
-        notes: `Found on ${job.site} - ${job.description || ''}`,
+        notes: `Found on ${job.site}\n\n${job.full_description || job.description || ''}`,
       });
     } catch (err) {
       console.error('Failed to add job:', err);
@@ -375,6 +377,32 @@ export function Discover() {
                     <ExternalLink className="h-4 w-4" />
                     View Job
                   </a>
+                  <Link
+                    to="/documents"
+                    search={{
+                      ai: 'resume',
+                      companyName: job.company,
+                      position: job.title,
+                      jobDescription: job.full_description || job.description || '',
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    AI Resume
+                  </Link>
+                  <Link
+                    to="/documents"
+                    search={{
+                      ai: 'cover_letter',
+                      companyName: job.company,
+                      position: job.title,
+                      jobDescription: job.full_description || job.description || '',
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    AI Cover Letter
+                  </Link>
 
                   <button
                     onClick={() => handleAddJob(job)}
