@@ -30,7 +30,11 @@
     WORKDIR /app
     COPY server/ .
     
+    # Make startup script executable
+    RUN chmod +x /app/start.sh
+    
     EXPOSE 8080
-    # If your container has >1 vCPU at times, you can set workers via env later
-    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+    # Use PORT env var if set, otherwise default to 8080
+    ENV PORT=8080
+    CMD ["/app/start.sh"]
     
