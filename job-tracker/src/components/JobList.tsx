@@ -54,7 +54,7 @@ export function JobList() {
       }),
       columnHelper.accessor('position', {
         header: 'Position',
-        cell: (info) => <div className="text-gray-700">{info.getValue()}</div>,
+        cell: (info) => <div className="text-gray-700 whitespace-normal">{info.getValue()}</div>,
       }),
       columnHelper.accessor('appliedDate', {
         header: 'Applied Date',
@@ -262,16 +262,25 @@ export function JobList() {
       {hasFilteredRows && (
         <div className="mt-8 flex flex-col">
           <div className="-my-2 -mx-4 sm:-mx-6 lg:-mx-8">
-            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
+            <div className="min-w-full py-2 align-middle md:px-6 lg:px-8">
+              <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300 table-fixed">
+                  <colgroup>
+                    <col className="w-[14%]" /> {/* Company */}
+                    <col className="w-[24%]" /> {/* Position */}
+                    <col className="w-[12%]" /> {/* Applied Date */}
+                    <col className="w-[10%]" /> {/* Stage */}
+                    <col className="w-[14%]" /> {/* Location */}
+                    <col className="w-[14%]" /> {/* Salary */}
+                    <col className="w-[12%]" /> {/* Actions */}
+                  </colgroup>
                   <thead className="bg-gray-50">
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
                           <th
                             key={header.id}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                           >
                             {header.isPlaceholder
                               ? null
@@ -288,7 +297,7 @@ export function JobList() {
                     {table.getRowModel().rows.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50">
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                          <td key={cell.id} className="px-3 py-4 truncate">
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext(),
