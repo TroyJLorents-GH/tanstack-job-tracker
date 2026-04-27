@@ -36,8 +36,6 @@ export function Discover() {
   const [selectedSites, setSelectedSites] = useState<string[]>([
     'linkedin',
     'indeed',
-    'glassdoor',
-    'zip_recruiter',
   ]);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<JobResult[]>([]);
@@ -49,13 +47,11 @@ export function Discover() {
   const siteOptions = [
     { value: 'linkedin', label: 'LinkedIn' },
     { value: 'indeed', label: 'Indeed' },
-    { value: 'glassdoor', label: 'Glassdoor' },
-    { value: 'zip_recruiter', label: 'ZipRecruiter' },
     { value: 'google', label: 'Google' },
   ];
 
-  const usingLinkedinOrZR = selectedSites.some((s) => s === 'linkedin' || s === 'zip_recruiter');
-  const usingIG = selectedSites.some((s) => s === 'indeed' || s === 'glassdoor');
+  const usingLinkedin = selectedSites.includes('linkedin');
+  const usingIndeed = selectedSites.includes('indeed');
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -63,9 +59,9 @@ export function Discover() {
       return;
     }
 
-    // If LinkedIn or ZipRecruiter are selected, strongly encourage a location unless remote
-    if (usingLinkedinOrZR && !location.trim() && !remoteOnly) {
-      setError('Please add a location (or check “Remote only”) for LinkedIn / ZipRecruiter searches.');
+    // LinkedIn requires a location unless remote
+    if (usingLinkedin && !location.trim() && !remoteOnly) {
+      setError('Please add a location (or check “Remote only”) for LinkedIn searches.');
       return;
     }
 
@@ -80,7 +76,7 @@ export function Discover() {
 
       // Convert days → hours for backend; respect Indeed limitation with remote
       let hours_old = daysOld > 0 ? daysOld * 24 : undefined;
-      if (usingIG && remoteOnly) {
+      if (usingIndeed && remoteOnly) {
         // Indeed limitation: can't combine is_remote with hours_old
         hours_old = undefined;
       }
@@ -92,7 +88,7 @@ export function Discover() {
         ...(remoteOnly ? { is_remote: true } : {}),
         ...(hours_old ? { hours_old } : {}),
         ...(location.trim() ? { location: location.trim() } : {}),
-        ...(usingIG ? { country_indeed: country } : {}),
+        ...(usingIndeed ? { country_indeed: country } : {}),
       };
 
       // Google uses google_search_term (location/time baked into the string)
@@ -165,7 +161,7 @@ export function Discover() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Jobs</h1>
-          <p className="text-gray-600">Search for jobs across LinkedIn, Indeed, Glassdoor, and ZipRecruiter</p>
+          <p className="text-gray-600">Search for jobs across LinkedIn, Indeed, and Google</p>
         </div>
 
         {/* Search Form */}
@@ -286,17 +282,17 @@ export function Discover() {
                 />
                 <span className="text-sm text-gray-700">Remote only</span>
               </label>
-              {usingIG && (
-                <p className="text-xs text-gray-500 mt-1">
-                  On Indeed/Glassdoor, Remote can’t be combined with “Posted Within”. We’ll prioritize Remote.
+              {usingIndeed && (
+                <p className=”text-xs text-gray-500 mt-1”>
+                  On Indeed, Remote can’t be combined with “Posted Within”. We’ll prioritize Remote.
                 </p>
               )}
             </div>
 
-            {usingIG && (
+            {usingIndeed && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Country (Indeed/Glassdoor)
+                  Country (Indeed)
                 </label>
                 <select
                   value={country}
